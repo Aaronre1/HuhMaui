@@ -1,24 +1,58 @@
-﻿namespace HuhMaui;
+﻿using System.Diagnostics;
+using Microsoft.Maui.Devices.Sensors;
+using Microsoft.Maui.Maps;
+
+namespace HuhMaui;
 
 public partial class MainPage : ContentPage
 {
-	int count = 0;
+    public Location location;
 
 	public MainPage()
 	{
 		InitializeComponent();
+		
 	}
 
-	private void OnCounterClicked(object sender, EventArgs e)
-	{
-		count++;
+    public async Task GetLocation()
+    {
+        try
+        {
+            var cache = await Geolocation.Default.GetLastKnownLocationAsync();
 
-		if (count == 1)
-			CounterBtn.Text = $"Clicked {count} time";
-		else
-			CounterBtn.Text = $"Clicked {count} times";
+            if (cache != null)
+            {
+                location = cache;
+            }
+            else
+            {
+                location = await Geolocation.Default.GetLocationAsync(new GeolocationRequest
+                {
+                    DesiredAccuracy = GeolocationAccuracy.Best,
+                    Timeout = TimeSpan.FromSeconds(30)
+                });
+            }
 
-		SemanticScreenReader.Announce(CounterBtn.Text);
-	}
+            if (location != null)
+            {
+                var mapSpan = new MapSpan(location, 0.01, 0.01);
+                this.map.MoveToRegion(mapSpan);
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.WriteLine($"GM: Can't query location: {e.Message}");
+        }
+    }
+
+    async void map_Loaded(System.Object sender, System.EventArgs e)
+    {
+        await GetLocation();
+    }
+
+    async void map_MapClicked(System.Object sender, Microsoft.Maui.Controls.Maps.MapClickedEventArgs e)
+    {
+        await GetLocation();
+    }
 }
 
